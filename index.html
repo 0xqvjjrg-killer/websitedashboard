@@ -19,6 +19,16 @@
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--tx);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
 body.glow{background:radial-gradient(1100px 520px at 85% -8%,#070714 0%,#000 55%),#000}
+/* ===== AMOLED ekstrem: flat #000 total, zero glow/shadow/blur ===== */
+body.am{background:#000!important}
+body.am header{background:rgba(0,0,0,.96)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;border-bottom-color:#0a0a0f!important}
+body.am .card,body.am .banner,body.am .mode,body.am .outbox,body.am .drop,body.am nav,body.am .setrow,body.am .stat{background:#000!important;border-color:#0b0b12!important;box-shadow:none!important}
+body.am .btn,body.am .btn.ac,body.am .btn.ghost,body.am .btn.danger{box-shadow:none!important}
+body.am input[type=text],body.am input[type=password],body.am input[type=number],body.am select,body.am textarea{background:#000!important;border-color:#0d0d16!important;box-shadow:none!important}
+body.am .logo .dot,body.am .logo svg{box-shadow:none!important}
+body.am .tag,body.am .ipc,body.am .dotch{box-shadow:none!important}
+body.am::-webkit-scrollbar-track{background:#000}
+body.am ::-webkit-scrollbar-track{background:#000}
 ::selection{background:var(--ac);color:#000}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-track{background:#000}
@@ -383,6 +393,10 @@ footer{max-width:1560px;margin:18px auto 26px;padding:0 18px;color:var(--tx3);fo
 
 <script>
 "use strict";
+/* polyfill TextEncoder — biar gak crash total di webview/engine yang gak punya (Telegram/WA in-app, WebView lama) */
+if(typeof TextEncoder==="undefined"){
+  globalThis.TextEncoder=class{encode(s){const u=unescape(encodeURIComponent(String(s)));const a=new Uint8Array(u.length);for(let i=0;i<u.length;i++)a[i]=u.charCodeAt(i);return a;}};
+}
 /* ============================================================
    DARKPANEL v3.0 — dashboard + builder payload
    read publik tanpa token · write butuh token (opsional config)
@@ -422,6 +436,7 @@ function applyTheme(){
   const r=document.documentElement.style;
   r.setProperty("--ac",CFG.amoled?"#00ff9c":CFG.accent);
   document.body.classList.toggle("glow",!CFG.amoled);
+  document.body.classList.toggle("am",!!CFG.amoled);
 }
 /* config lewat URL hash: #token=..&owner=..&repo=.. → auto-set & simpan */
 function applyHashCfg(){
