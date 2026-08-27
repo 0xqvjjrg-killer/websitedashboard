@@ -560,7 +560,7 @@ async function refresh(force){
     s.textContent="◉ ONLINE"; s.style.color="var(--good)";
     $("liveDot").classList.remove("off");
     $("noTokenBar").style.display=CFG.token?"none":"block";
-    $("footInfo").textContent=CFG.owner+"/"+CFG.repo+" · "+act.length+" hits · "+(new Date().toLocaleTimeString("id-ID",{hour12:false}));
+    $("footInfo").textContent=CFG.owner+"/"+CFG.repo+" · "+HITS.filter(h=>h.state==="open").length+" hits · "+(new Date().toLocaleTimeString("id-ID",{hour12:false}));
   }catch(e){
     const s=$("st-status"); s.textContent="✕ OFFLINE"; s.style.color="var(--bad)";
     $("liveDot").classList.add("off");
