@@ -196,6 +196,9 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
 
 <!-- ============ DASHBOARD ============ -->
 <section id="tab-dash" class="on">
+  <div class="notice" id="noTokenBar" style="display:none;margin-bottom:14px;border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.08)">
+    <b>⚠ MODE BACA SAJA.</b> Data hit tetap kebaca (repo publik). Tapi <b>generate payload</b> & <b>purge</b> butuh token GitHub → isi di <a href="javascript:void(0)" onclick="document.querySelector('button[data-tab=&quot;set&quot;]').click()" style="color:var(--ac)">tab SETTING</a>, atau buka dashboard sekali lewat link <span class="mono" style="color:var(--ac)">&nbsp;...websitedashboard/#token=ghp_xxx&nbsp;</span> (auto-isi & tersimpan).
+  </div>
   <div class="stats">
     <div class="stat hot"><div class="k">Total Hit</div><div class="v" id="st-total">—</div><div class="sub">semua target tercatat</div></div>
     <div class="stat"><div class="k">IP Unik</div><div class="v" id="st-unique">—</div><div class="sub">target berbeda</div></div>
@@ -308,8 +311,10 @@ textarea.code{width:100%;background:#000;border:0;color:var(--ac2);font-family:v
     <h3>⟐ AKSI</h3>
     <div class="toolbar" style="margin:0">
       <button class="btn ac" id="btnSaveCfg">💾 SIMPAN CONFIG</button>
+      <button class="btn" id="btnTestConn">⟳ TES KONEKSI</button>
       <button class="btn danger" id="btnPurge">◉ PURGE SEMUA HIT (tutup semua issue)</button>
     </div>
+    <div class="notice" id="connStatus" style="display:none;margin-top:12px"></div>
   </div>
 </section>
 
@@ -382,9 +387,29 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
 
 /* ---------- github api ---------- */
 async function gh(path,opt={}){
-  const r=await fetch(api+path,{ ...opt, headers:{"Authorization":"token "+CFG.token,"Accept":"application/vnd.github+json", ...(opt.headers||{})} });
-  if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error((e.message||r.status)+" // "+(e.documentation_url||"")); }
+  const h=Object.assign({"Accept":"application/vnd.github+json"},opt.headers||{});
+  if(CFG.token) h["Authorization"]="token "+CFG.token;   // tanpa token = baca publik (bisa buat lihat hit)
+  const r=await fetch(api+path,Object.assign({},opt,{headers:h}));
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    let msg=e.message||("HTTP "+r.status);
+    if(r.status===401) msg="TOKEN KOSONG/SALAH — buka tab SETTING, isi token, lalu SIMPAN (atau buka link dashboard dengan #token=...)";
+    if(r.status===403&&!CFG.token) msg="Rate-limit baca publik kepakai. Isi token di SETTING untuk kuota penuh.";
+    if(r.status===404) msg="Owner/Repo nggak ketemu — cek isian SETTING (owner = 0xqvjjrg-killer, repo = websitedashboard).";
+    throw new Error(msg);
+  }
   return r.status===204?null:r.json();
+}
+/* config lewat URL hash: dashboard/#token=ghp_xxx&owner=xxx&repo=xxx → auto-set & simpan */
+function applyHashCfg(){
+  try{
+    const hm=new URLSearchParams((location.hash||"").replace(/^#/,""));
+    let ch=false;
+    if(hm.get("token")){ CFG.token=hm.get("token"); ch=true; }
+    if(hm.get("owner")){ CFG.owner=hm.get("owner"); ch=true; }
+    if(hm.get("repo")){ CFG.repo=hm.get("repo"); ch=true; }
+    if(ch){ saveCfg(); location.hash=""; }
+  }catch(e){}
 }
 function parseBody(body){
   try{ return JSON.parse(body.split("◈◈◈")[1]||body); }catch(e){ return null; }
@@ -525,12 +550,13 @@ async function refresh(force){
     await fetchHits(); render();
     s.textContent="◉ ONLINE"; s.style.color="var(--good)";
     $("liveDot").classList.remove("off");
+    $("noTokenBar").style.display=CFG.token?"none":"block";
     $("footInfo").textContent=CFG.owner+"/"+CFG.repo+" · "+act.length+" hits · "+(new Date().toLocaleTimeString("id-ID",{hour12:false}));
   }catch(e){
     const s=$("st-status"); s.textContent="✕ OFFLINE"; s.style.color="var(--bad)";
     $("liveDot").classList.add("off");
     const box=$("loadDash"); box.classList.remove("hidden");
-    box.innerHTML=`<span class="spin"></span><br>GAGAL: ${esc(e.message)}<div style="margin-top:12px;font-size:11px;color:var(--tx3)">cek token / owner / repo di tab SETTING</div>`;
+    box.innerHTML=`<span class="spin"></span><br>GAGAL: ${esc(e.message)}<div style="margin-top:12px;font-size:11px;color:var(--tx3)">Solusi: isi token di SETTING (SIMpan) atau buka dashboard lewat link #token=ghp_xxx</div>`;
     $("tbl").classList.add("hidden"); $("emptyDash").classList.add("hidden");
   }
 }
@@ -542,6 +568,7 @@ function armTimer(){
 /* ---------- delete / purge ---------- */
 async function closeIssue(n){ try{ await gh(`/repos/${CFG.owner}/${CFG.repo}/issues/${n}`,{method:"PATCH",body:JSON.stringify({state:"closed"})}); return true; }catch(e){ return false; } }
 async function purgeAll(){
+  if(!CFG.token){ toast("BUTUH TOKEN — isi di SETTING dulu biar bisa purge",true); return; }
   if(!confirm("Tutup SEMUA issue (hapus semua hit)?")) return;
   let ok=0; for(const h of HITS){ if(h.state==="open"&&await closeIssue(h.n)) ok++; }
   toast(ok+" hit dibersihkan ✓"); refresh(true);
@@ -600,6 +627,7 @@ function fmtSize(n){ return n>1048576?(n/1048576).toFixed(2)+" MB":Math.round(n/
 
 $("btnGen").onclick=()=>{
   if(!bImgData){ toast("Upload foto dulu dong 😤",true); return; }
+  if(!CFG.token){ toast("BUTUH TOKEN — buka SETTING, isi token GitHub, SIMPAN. Payload tanpa token nggak bisa kirim data.",true); return; }
   const mode=document.querySelector(".mode.on").dataset.mode;
   const name=$("bName").value.trim()||"payload.jpeg";
   const title=$("bTitle").value||"Foto";
@@ -699,6 +727,16 @@ function genHTML(o){
 /* ---------- settings actions ---------- */
 $("btnSaveCfg").onclick=()=>{ readFields(); if($("sSaveAuto").checked) saveCfg(); applyAmoled(); armTimer(); toast("Config tersimpan ✓"); refresh(true); };
 $("sAmoled").onchange=()=>{ readFields(); applyAmoled(); };
+$("btnTestConn").onclick=async()=>{
+  const box=$("connStatus"); box.style.display="block"; box.style.borderColor="rgba(0,229,255,.4)"; box.style.background="rgba(0,229,255,.06)";
+  readFields();
+  if(!CFG.token){ box.innerHTML="<b>TOKEN KOSONG.</b> Isi token di kolom atas lalu SIMPAN CONFIG."; return; }
+  box.innerHTML="Tes koneksi...";
+  try{
+    const u=await gh("/user");
+    box.innerHTML="<b style='color:var(--good)'>✓ TOKEN VALID</b> — login sebagai <b>"+esc(u.login)+"</b> · scopes: "+(u.scopes||[]).join(", ")||"-";
+  }catch(e){ box.innerHTML="<b style='color:var(--bad)'>✕ GAGAL:</b> "+esc(e.message); }
+};
 $("btnPurge").onclick=purgeAll;
 
 /* ---------- toolbar events ---------- */
@@ -719,7 +757,7 @@ function fillFilters(){
 }
 
 /* ---------- boot ---------- */
-loadCfg(); paintFields(); readFields(); applyAmoled();
+loadCfg(); applyHashCfg(); paintFields(); readFields(); applyAmoled();
 if(CFG.auto) armTimer();
 refresh(true);
 setTimeout(fillFilters,2500);
